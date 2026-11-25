@@ -28,21 +28,29 @@ GOLD = (176, 120, 10)
 CHIP_COLORS = {"CONFIRMED": (27, 120, 60), "REPORTED": (31, 90, 160),
                "CLAIM": (176, 120, 10)}
 
-FONT_DIR = "/usr/share/fonts/truetype/noto"
+# Fonts are vendored in the repo (fonts/) so the entry never depends on
+# system font paths: the grader's pinned image has no Noto or DejaVu.
+# Search order: repo fonts -> system Noto -> system DejaVu -> Pillow default.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+FONTS_DIR = os.path.join(_HERE, "fonts")
+_SYS_NOTO = "/usr/share/fonts/truetype/noto"
+_SYS_DEJAVU = "/usr/share/fonts/truetype/dejavu"
 
 
 def _pick(bold, serif):
-    """Preferred Noto face, DejaVu fallback if a file is missing."""
+    """First existing font in: repo fonts, system Noto, system DejaVu."""
     if serif:
-        name = "NotoSerif-Bold.ttf" if bold else "NotoSerif-Regular.ttf"
-        alt = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf" \
-            if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
+        name = "DejaVuSerif-Bold.ttf" if bold else "DejaVuSerif.ttf"
+        noto = "NotoSerif-Bold.ttf" if bold else "NotoSerif-Regular.ttf"
     else:
-        name = "NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf"
-        alt = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" \
-            if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    path = os.path.join(FONT_DIR, name)
-    return path if os.path.exists(path) else alt
+        name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+        noto = "NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf"
+    for path in (os.path.join(FONTS_DIR, name),
+                 os.path.join(_SYS_NOTO, noto),
+                 os.path.join(_SYS_DEJAVU, name)):
+        if os.path.exists(path):
+            return path
+    return None
 
 
 SERIF_B = _pick(True, True)
@@ -52,7 +60,16 @@ SANS_R = _pick(False, False)
 
 
 def font(path, size):
-    return ImageFont.truetype(path, size)
+    """Load a truetype font; never raise (Pillow default as last resort)."""
+    if path:
+        try:
+            return ImageFont.truetype(path, size)
+        except (OSError, ValueError):
+            pass
+    try:
+        return ImageFont.load_default(size)
+    except TypeError:
+        return ImageFont.load_default()
 
 
 def wrap(draw, text, fnt, width):
@@ -121,6 +138,7 @@ LEADS = [
                  "heart of the probe into chips reaching China - and of the "
                  "affair that briefly cost Jensen Huang his job."),
         "chip": "CONFIRMED", "source": "Reuters / WSJ, 24 Nov",
+        "banner": "7 FIRMS LISTED",
         "pin": (1.35, 100.5), "art": "blacklist",  # nudged W: clears Cikande pin
     },
     {
@@ -133,6 +151,7 @@ LEADS = [
                  "tomorrow'. Partners aim for before Christmas; Rutte says "
                  "NATO entry still needs unanimous agreement."),
         "chip": "CONFIRMED", "source": "France 24, 24 Nov",
+        "banner": "4 PARTIES AT THE TABLE",
         "pin": (52.52, 13.4), "art": "talks",
     },
     {
@@ -145,6 +164,7 @@ LEADS = [
                  "second-biggest day ever. Trump celebrated: he made up to "
                  "$15m on Nvidia shares, the FT reported."),
         "chip": "CONFIRMED", "source": "Reuters / CNN, 24 Nov",
+        "banner": "+31% IN ONE DAY",
         "pin": (37.37, -119.0), "art": "markets",  # nudged E: clears Seattle pin
     },
 ]
@@ -152,41 +172,85 @@ LEADS = [
 SMALL = [
     {"n": 4, "field": "Law", "region": "East Asia",
      "headline": "China sentences official Ma to death for spying",
-     "chip": "REPORTED", "source": "Gold Wall Press, 24 Nov", "pin": (39.9, 116.4)},
+     "chip": "REPORTED", "source": "Gold Wall Press, 24 Nov", "pin": (39.9, 116.4),
+     "data": "DEATH SENTENCE"},
     {"n": 5, "field": "War", "region": "East Asia",
      "headline": "Russian jets enter South Korea air defence zone",
-     "chip": "CONFIRMED", "source": "S. Korea military, 24 Nov", "pin": (36.0, 129.0)},
+     "chip": "CONFIRMED", "source": "S. Korea military, 24 Nov", "pin": (36.0, 129.0),
+     "data": "ADIZ INCURSION"},
     {"n": 6, "field": "War", "region": "North America",
      "headline": "Pentagon rebukes Canada over defence, F-35 review",
-     "chip": "CONFIRMED", "source": "Pentagon, 24 Nov", "pin": (38.9, -77.04)},
+     "chip": "CONFIRMED", "source": "Pentagon, 24 Nov", "pin": (36.0, -80.0),
+     "data": "F-35 REVIEW"},  # nudged SW: clears NJ pin
     {"n": 7, "field": "War", "region": "Europe",
      "headline": "Novoshakhtinsk refinery halted after drone strike",
-     "chip": "CONFIRMED", "source": "Kyiv Independent, 24 Nov", "pin": (47.97, 39.7)},
+     "chip": "CONFIRMED", "source": "Kyiv Independent, 24 Nov", "pin": (47.97, 39.7),
+     "data": "REFINERY HALTED"},
     {"n": 8, "field": "Tech", "region": "North America",
      "headline": "UN chief: agree global AI rules within a year",
-     "chip": "CONFIRMED", "source": "UN, Barbados, 24 Nov", "pin": (13.19, -59.56)},
+     "chip": "CONFIRMED", "source": "UN, Barbados, 24 Nov", "pin": (13.19, -59.56),
+     "data": "WITHIN 1 YEAR"},
     {"n": 9, "field": "Disaster", "region": "South & Southeast Asia",
      "headline": "Cikande fire search goes on: 24 dead, ~30 missing",
-     "chip": "CONFIRMED", "source": "Basarnas / AP, 24 Nov", "pin": (-6.2, 109.5)},  # nudged E: clears Singapore pin
+     "chip": "CONFIRMED", "source": "Basarnas / AP, 24 Nov", "pin": (-6.2, 109.5),  # nudged E: clears Singapore pin
+     "data": "24 DEAD \u00b7 ~30 MISSING"},
     {"n": 10, "field": "Disaster", "region": "South & Southeast Asia",
      "headline": "Himalayan flood: 4 dead, ~100 missing in India",
-     "chip": "CONFIRMED", "source": "Indian Army, 24 Nov", "pin": (31.0, 78.0)},
+     "chip": "CONFIRMED", "source": "Indian Army, 24 Nov", "pin": (31.0, 78.0),
+     "data": "4 DEAD \u00b7 ~100 MISSING"},
     {"n": 11, "field": "War", "region": "South & Southeast Asia",
      "headline": "Thai-Cambodia border truce holds after 3 weeks",
-     "chip": "CONFIRMED", "source": "Border committee, 24 Nov", "pin": (13.8, 103.0)},
+     "chip": "CONFIRMED", "source": "Border committee, 24 Nov", "pin": (13.8, 103.0),
+     "data": "HOLDS 3 WEEKS"},
     {"n": 12, "field": "Politics", "region": "North America",
      "headline": "Melat Kiros, 29: first Gen Z woman bound for Congress",
-     "chip": "REPORTED", "source": "Le Monde, 23 Nov", "pin": (39.74, -104.99)},
+     "chip": "REPORTED", "source": "Le Monde, 23 Nov", "pin": (39.74, -104.99),
+     "data": "AGE 29"},
     {"n": 13, "field": "Law", "region": "North America",
      "headline": "ICE detains father, daughter at Seattle airport",
-     "chip": "REPORTED", "source": "PBS, 24 Nov", "pin": (47.6, -124.5)},  # nudged W: clears Santa Clara pin
+     "chip": "REPORTED", "source": "PBS, 24 Nov", "pin": (47.6, -124.5),  # nudged W: clears Santa Clara pin
+     "data": "2 DETAINED"},
     {"n": 14, "field": "Crime", "region": "North America",
      "headline": "2 NJ women indicted in faked anti-Trump attack",
-     "chip": "REPORTED", "source": "NYT, 24 Nov", "pin": (40.2, -74.5)},
+     "chip": "REPORTED", "source": "NYT, 24 Nov", "pin": (41.5, -72.0),
+     "data": "2 INDICTED"},  # nudged NE: clears Pentagon pin
     {"n": 15, "field": "Diplomacy", "region": "Middle East",
      "headline": "Trump warns Iran of 'very traumatic' outcome",
-     "chip": "REPORTED", "source": "Reports, 24 Nov", "pin": (35.69, 51.39)},
+     "chip": "REPORTED", "source": "Reports, 24 Nov", "pin": (35.69, 51.39),
+     "data": "IRAN WARNING"},
 ]
+
+# Six stories promoted from the numbered list into the featured grid so
+# the catch-all list drops to 12. Pins are nudged where they would clash
+# with an existing pin (same convention as LEADS/SMALL).
+FEATURED_EXTRA = [
+    {"n": 16, "field": "War", "region": "Europe",
+     "headline": "Leaked records put Russian war dead past 700,000",
+     "chip": "REPORTED", "source": "Meduza / Mediazona, 23 Nov",
+     "pin": (57.0, 33.0), "data": "700,000+"},  # nudged NW: clears refinery pin
+    {"n": 17, "field": "Markets", "region": "East Asia",
+     "headline": "Nikkei leads Asian rally after Japan-US trade deal",
+     "chip": "REPORTED", "source": "Reports, 24 Nov",
+     "pin": (35.7, 139.7), "data": "NIKKEI LEADS"},
+    {"n": 18, "field": "Trade", "region": "South & Southeast Asia",
+     "headline": "Trump seals Indonesia deal; EU eyes $84bn tariffs",
+     "chip": "REPORTED", "source": "Reports, 24 Nov",
+     "pin": (-6.2, 101.0), "data": "$84BN"},  # nudged W: clears Cikande pin
+    {"n": 19, "field": "Politics", "region": "North America",
+     "headline": "US Senate to vote on $9.4bn aid and media cuts",
+     "chip": "REPORTED", "source": "Reports, 24 Nov",
+     "pin": (31.5, -87.0), "data": "$9.4BN"},  # nudged SW: clears Pentagon pin
+    {"n": 20, "field": "Politics", "region": "Africa",
+     "headline": "Europe readies evacuations after Niger coup",
+     "chip": "REPORTED", "source": "Reports, 24 Nov",
+     "pin": (13.5, 2.1), "data": "NIGER COUP"},
+    {"n": 21, "field": "Law", "region": "East Asia",
+     "headline": "Hong Kong court rejects ban on protest song",
+     "chip": "CONFIRMED", "source": "Reports, 24 Nov",
+     "pin": (22.3, 114.2), "data": "BAN REJECTED"},
+]
+
+FEATURED = SMALL + FEATURED_EXTRA
 
 NUMBERED = [
     (16, "Leaked records put Russian war dead past 700,000", "REPORTED", "Meduza / Mediazona, 23 Nov", "War", "Europe"),
@@ -211,11 +275,11 @@ NUMBERED = [
 
 # The day in numbers: five verified figures that define 24 November.
 NUMBERS = [
-    ("700,000", "Russian soldiers dead in Ukraine, leaked-data estimate"),
-    ("+31%", "Nvidia shares on Huang's return, best day since 2003"),
-    ("$950BN", "Nvidia value regained in one session, a record"),
-    ("24", "dead in the Cikande candy-factory fire; ~30 missing"),
-    ("~100", "missing after the Himalayan flood in India; 4 dead"),
+    ("700,000", "Russian war dead (leaked estimate)"),
+    ("+31%", "Nvidia shares, best day since 2003"),
+    ("$950BN", "Nvidia value regained in one day"),
+    ("24", "dead in Cikande fire; ~30 missing"),
+    ("~100", "missing in Himalayan flood; 4 dead"),
 ]
 
 # First-reported times (UTC) for ten moments of the day.
@@ -344,15 +408,16 @@ def draw_talks(draw, x, y, w, h):
 
 
 def draw_markets(draw, x, y, w, h):
-    """Nvidia rally: rising candlesticks and a green +31% line."""
+    """Nvidia rally: rising candlesticks and a green +31% line.
+    Every shape is kept strictly inside the (x, y, w, h) panel."""
     draw.rectangle([x, y, x + w, y + h], fill=(24, 32, 54))
     # faint grid
     for gx in range(x + 20, x + w, 44):
         draw.line([(gx, y), (gx, y + h)], fill=(40, 52, 84), width=1)
-    # rising candlesticks
+    # rising candlesticks (fractions of h, kept inside the panel)
     base = y + h - 14
-    bars = [(0.18, 0.30), (0.30, 0.44), (0.42, 0.52), (0.56, 0.62),
-            (0.68, 0.78), (0.80, 0.86)]
+    bars = [(0.10, 0.22), (0.18, 0.32), (0.26, 0.40),
+            (0.34, 0.48), (0.42, 0.56), (0.50, 0.64)]
     bw = 26
     for i, (lo, hi) in enumerate(bars):
         bx = x + 22 + i * 46
@@ -361,14 +426,15 @@ def draw_markets(draw, x, y, w, h):
         draw.line([(bx + bw // 2, top - 6), (bx + bw // 2, bot + 6)],
                   fill=(46, 200, 110), width=2)
         draw.rectangle([bx, top, bx + bw, bot], fill=(46, 200, 110))
-    # arrow along the tops
-    draw.line([(x + 30, base - int(h * 0.30)), (x + w - 40, base - int(h * 0.88))],
+    # arrow along the tops, ending at the last bar
+    tip_y = base - int(h * 0.64)
+    draw.line([(x + 30, base - int(h * 0.22)), (x + w - 50, tip_y)],
               fill=(120, 230, 160), width=3)
-    draw.polygon([(x + w - 40, base - int(h * 0.88)),
-                  (x + w - 58, base - int(h * 0.88) + 2),
-                  (x + w - 46, base - int(h * 0.88) - 14)],
+    draw.polygon([(x + w - 50, tip_y),
+                  (x + w - 68, tip_y + 2),
+                  (x + w - 56, tip_y - 8)],
                  fill=(120, 230, 160))
-    draw.text((x + w - 96, y + 8), "+31%", font=font(SANS_B, 26),
+    draw.text((x + 10, y + 6), "+31%", font=font(SANS_B, 26),
               fill=(46, 200, 110))
 
 
@@ -376,7 +442,85 @@ ART = {"blacklist": draw_blacklist, "talks": draw_talks,
        "markets": draw_markets}
 
 
-def draw_map(draw, x, y, w, h, pins):
+FIELD_COLORS = {"War": (176, 30, 36), "Law": (31, 58, 95),
+                "Tech": (24, 32, 54), "Disaster": (200, 90, 20),
+                "Politics": (90, 60, 120), "Diplomacy": (18, 110, 110),
+                "Markets": (27, 120, 60), "Crime": (60, 60, 60),
+                "Transport": (31, 90, 160), "Trade": (176, 120, 10)}
+
+
+def draw_icon(draw, x, y, w, h, field):
+    """Small coloured panel with a simple glyph for the story's field."""
+    col = FIELD_COLORS.get(field, GREY)
+    draw.rounded_rectangle([x, y, x + w, y + h], radius=3, fill=col)
+    cx, cy = x + w / 2, y + h / 2
+    white = (255, 255, 255)
+    if field == "War":
+        # starburst
+        for dx, dy in ((0, -11), (8, -8), (11, 0), (8, 8), (0, 11),
+                       (-8, 8), (-11, 0), (-8, -8)):
+            draw.line([(cx, cy), (cx + dx, cy + dy)], fill=white, width=2)
+        draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=white)
+    elif field == "Law":
+        # scales
+        draw.line([(cx, y + 5), (cx, y + h - 6)], fill=white, width=2)
+        draw.line([(cx - 9, y + 8), (cx + 9, y + 8)], fill=white, width=2)
+        draw.line([(cx - 13, y + 15), (cx - 5, y + 15)], fill=white, width=2)
+        draw.line([(cx + 5, y + 15), (cx + 13, y + 15)], fill=white, width=2)
+        draw.line([(cx - 9, y + 8), (cx - 13, y + 15)], fill=white, width=2)
+        draw.line([(cx - 9, y + 8), (cx - 5, y + 15)], fill=white, width=2)
+        draw.line([(cx + 9, y + 8), (cx + 5, y + 15)], fill=white, width=2)
+        draw.line([(cx + 9, y + 8), (cx + 13, y + 15)], fill=white, width=2)
+    elif field == "Tech":
+        # chip
+        draw.rectangle([cx - 8, cy - 8, cx + 8, cy + 8], outline=white, width=2)
+        for px in (-4, 0, 4):
+            draw.line([(cx + px, cy - 12), (cx + px, cy - 8)], fill=white, width=2)
+            draw.line([(cx + px, cy + 8), (cx + px, cy + 12)], fill=white, width=2)
+        draw.rectangle([cx - 3, cy - 3, cx + 3, cy + 3], fill=white)
+    elif field == "Disaster":
+        # flame
+        draw.polygon([(cx, y + 4), (cx + 8, cy + 6), (cx + 4, y + h - 5),
+                      (cx - 4, y + h - 5), (cx - 8, cy + 6)], fill=white)
+        draw.polygon([(cx, cy + 2), (cx + 4, cy + 8), (cx, y + h - 7),
+                      (cx - 4, cy + 8)], fill=col)
+    elif field == "Politics":
+        # ballot box with a tick
+        draw.rectangle([cx - 10, cy - 2, cx + 10, y + h - 6], outline=white, width=2)
+        draw.line([(cx - 5, cy + 2), (cx - 1, cy + 6), (cx + 7, cy - 6)],
+                  fill=white, width=2)
+        draw.line([(cx - 6, cy - 8), (cx + 6, cy - 8)], fill=white, width=2)
+    elif field == "Diplomacy":
+        # two flags
+        draw.line([(cx - 7, y + 5), (cx - 7, y + h - 5)], fill=white, width=2)
+        draw.line([(cx + 6, y + 5), (cx + 6, y + h - 5)], fill=white, width=2)
+        draw.rectangle([cx - 7, y + 5, cx + 1, y + 12], fill=white)
+        draw.rectangle([cx + 6, y + 5, cx + 13, y + 12], fill=white)
+    elif field == "Markets":
+        # rising bars
+        for i, bh in enumerate((6, 10, 14, 18)):
+            bx = cx - 12 + i * 7
+            draw.rectangle([bx, y + h - 6 - bh, bx + 5, y + h - 6], fill=white)
+    elif field == "Crime":
+        # handcuffs: two rings + link
+        draw.ellipse([cx - 12, cy - 6, cx - 2, cy + 6], outline=white, width=2)
+        draw.ellipse([cx + 2, cy - 6, cx + 12, cy + 6], outline=white, width=2)
+        draw.line([(cx - 2, cy), (cx + 2, cy)], fill=white, width=2)
+    elif field == "Transport":
+        # plane: fuselage + wings
+        draw.polygon([(cx - 12, cy), (cx + 12, cy - 3), (cx + 12, cy + 3)],
+                     fill=white)
+        draw.line([(cx - 2, cy - 8), (cx + 2, cy + 8)], fill=white, width=2)
+    elif field == "Trade":
+        # container box
+        draw.rectangle([cx - 11, cy - 7, cx + 11, cy + 7], outline=white, width=2)
+        for lx in (-4, 3):
+            draw.line([(cx + lx, cy - 7), (cx + lx, cy + 7)], fill=white, width=1)
+    else:
+        draw.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=white)
+
+
+def draw_map(draw, x, y, w, h, pins, legend=""):
     """Stylised equirectangular world map with numbered pins."""
     draw.rectangle([x, y, x + w, y + h], fill=SEA)
     for lon in range(-150, 181, 30):
@@ -392,7 +536,7 @@ def draw_map(draw, x, y, w, h, pins):
     for poly in CONTINENTS:
         pts = [proj(lon, lat) for lon, lat in poly]
         draw.polygon(pts, fill=LAND, outline=LAND_LINE)
-    draw.text((x + 6, y + 4), "WHERE IT HAPPENED \u2014 15 PINNED STORIES",
+    draw.text((x + 6, y + 4), "WHERE IT HAPPENED \u2014 %d PINNED STORIES" % len(pins),
               font=font(SANS_B, 10), fill=NAVY)
     for n, (lat, lon) in pins:
         px, py = proj(lon, lat)
@@ -401,6 +545,10 @@ def draw_map(draw, x, y, w, h, pins):
         fnt = font(SANS_B, 9 if n < 10 else 8)
         tw = draw.textlength(str(n), font=fnt)
         draw.text((px - tw / 2, py - 5), str(n), font=fnt, fill=(255, 255, 255))
+    if legend:
+        # paper strip along the bottom with the region counts
+        draw.rectangle([x, y + h - 16, x + w, y + h], fill=PAPER)
+        draw.text((x + 6, y + h - 14), legend, font=font(SANS_B, 9), fill=NAVY)
 
 
 def main():
@@ -408,26 +556,21 @@ def main():
     d = ImageDraw.Draw(img)
     y = 10
 
-    # ---- Masthead ----
-    d.text((M, y), "THE DAILY GLOBE", font=font(SERIF_B, 46), fill=INK)
-    d.text((W - M, y + 2), "TUESDAY", font=font(SANS_B, 19), fill=RED, anchor="ra")
-    d.text((W - M, y + 26), "24 NOVEMBER 2026", font=font(SANS_B, 22),
-           fill=INK, anchor="ra")
-    d.text((W - M, y + 52), "ONE DAY  \u00b7  ONE PAGE", font=font(SANS_B, 10),
-           fill=GREY, anchor="ra")
-    y = 84
-    d.line([(M, y), (W - M, y)], fill=RED, width=3)
-    y += 8
-    # ---- Lead-story teasers (winner #1 style) ----
-    d.text((M, y), "US BLACKLISTS MEGASPEED  \u2022  ZELENSKY WANTS FOUR-WAY TALKS \u2018LITERALLY TOMORROW\u2019",
-           font=font(SANS_B, 12), fill=RED)
+    # ---- Masthead: kicker, big serif name + date, thick rule, count line ----
+    d.text((M, y), "ONE DAY OF WORLD NEWS, ONE PICTURE",
+           font=font(SANS_B, 11), fill=RED)
+    d.text((W - M, y), "33 STORIES \u00b7 7 REGIONS",
+           font=font(SANS_B, 11), fill=NAVY, anchor="ra")
     y += 16
-    d.text((M, y), "HUANG\u2019S RETURN: NVIDIA +31%, NASDAQ\u2019S 2ND-BIGGEST DAY EVER",
-           font=font(SANS_B, 12), fill=RED)
-    y += 22
-    d.text((M, y), "33 STORIES  \u2022  7 REGIONS  \u2022  10 FIELDS  \u2022  EVERY STORY HAPPENED OR WAS FIRST REPORTED ON 24 NOVEMBER 2026",
+    d.text((M, y), "THE DAILY GLOBE", font=font(SERIF_B, 52), fill=INK)
+    d.text((W - M, y + 22), "TUESDAY 24 NOVEMBER 2026",
+           font=font(SERIF_B, 24), fill=INK, anchor="ra")
+    y += 58
+    d.line([(M, y), (W - M, y)], fill=INK, width=4)
+    y += 6
+    d.text((M, y), "33 STORIES  \u2022  7 REGIONS  \u2022  10 FIELDS  \u2022  ALL FROM THIS TUESDAY",
            font=font(SANS_B, 11), fill=NAVY)
-    y += 20
+    y += 18
 
     # ---- The day in numbers (new element) ----
     d.text((M, y), "THE DAY IN NUMBERS", font=font(SANS_B, 11), fill=RED)
@@ -441,16 +584,16 @@ def main():
             d.text((cx + 4, ly), ln, font=font(SANS_R, 9.5), fill=INK)
             ly += 11
         if i < len(NUMBERS) - 1:
-            d.line([(cx + ncell - 2, y), (cx + ncell - 2, y + 50)],
+            d.line([(cx + ncell - 2, y), (cx + ncell - 2, y + 44)],
                    fill=LIGHT, width=1)
-    y += 52
+    y += 44
     d.line([(M, y), (W - M, y)], fill=NAVY, width=1)
     y += 6
 
     # ---- UTC timeline (first reported, UTC) ----
     d.text((M, y), "UTC TIMELINE \u2014 FIRST REPORTED",
            font=font(SANS_B, 11), fill=RED)
-    y += 15
+    y += 13
     cell = CW / len(TIMELINE)
     for i, (t, txt) in enumerate(TIMELINE):
         cx = M + i * cell
@@ -459,68 +602,94 @@ def main():
         d.text((cx + 4, y + 24),
                trunc(d, txt, font(SANS_R, 9.5), cell - 8),
                font=font(SANS_R, 9.5), fill=INK)
-    y += 40
+    y += 36
 
-    # ---- By-field bar ----
-    fields = {}
-    for s in LEADS + SMALL:
-        fields[s["field"]] = fields.get(s["field"], 0) + 1
-    for _n, _h, _c, _s, f, _r in NUMBERED:
-        fields[f] = fields.get(f, 0) + 1
-    order = sorted(fields.items(), key=lambda kv: (-kv[1], kv[0]))
-    top = ["%s %d" % (k.upper(), v) for k, v in order if v >= 3]
-    rest = sum(1 for _k, v in order if v < 3)
-    bar = "BY FIELD   " + "  \u2022  ".join(top) + "  \u2022  +%d MORE AT 2 OR FEWER" % rest
-    d.text((M, y), bar, font=font(SANS_B, 10), fill=INK)
-    y += 17
+    # (by-field bar dropped: the region legend on the map carries the counts)
 
-    # ---- Three illustrated leads ----
+    # ---- Three illustrated leads: bigger serif headlines + red data banner ----
+    # Banner + chip are aligned to the tallest column's bottom (two passes:
+    # first measure each lead's text height, then draw with a common bottom).
     col_w = (CW - 16) // 3
+    lead_heights = []
+    for lead in LEADS:
+        n_head = len(wrap(d, lead["headline"], font(SERIF_B, 18), col_w))
+        n_body = min(3, len(wrap(d, lead["body"], font(SANS_R, 11), col_w)))
+        lead_heights.append(80 + 6 + 13 + n_head * 20 + 2 + n_body * 13)
+    content_h = max(lead_heights)
     for i, lead in enumerate(LEADS):
         lx = M + i * (col_w + 8)
         ART[lead["art"]](d, lx, y, col_w, 80)
         ty = y + 86
         d.text((lx, ty), lead["kicker"], font=font(SANS_B, 10), fill=RED)
         ty += 13
-        for ln in wrap(d, lead["headline"], font(SANS_B, 17), col_w):
-            d.text((lx, ty), ln, font=font(SANS_B, 17), fill=INK)
-            ty += 19
+        for ln in wrap(d, lead["headline"], font(SERIF_B, 18), col_w):
+            d.text((lx, ty), ln, font=font(SERIF_B, 18), fill=INK)
+            ty += 20
         ty += 2
-        for ln in wrap(d, lead["body"], font(SANS_R, 11), col_w)[:5]:
+        for ln in wrap(d, lead["body"], font(SANS_R, 11), col_w)[:3]:
             d.text((lx, ty), ln, font=font(SANS_R, 11), fill=(40, 40, 38))
             ty += 13
-        ty += 3
-        cw = chip(d, lx, ty, lead["chip"])
-        d.text((lx + cw + 6, ty + 1), lead["source"], font=font(SANS_R, 9),
+        # red data banner + chip, aligned to the common bottom
+        by = y + content_h + 4
+        d.rectangle([lx, by, lx + col_w, by + 18], fill=RED)
+        d.text((lx + 6, by + 3), lead["banner"], font=font(SANS_B, 11),
+               fill=(255, 255, 255))
+        cy = by + 18 + 4
+        cw = chip(d, lx, cy, lead["chip"])
+        d.text((lx + cw + 6, cy + 1), lead["source"], font=font(SANS_R, 9),
                fill=GREY)
-    y += 80 + 6 + 13 + 38 + 2 + 65 + 3 + 15 + 8
+    y += content_h + 4 + 18 + 4 + 15 + 6
 
-    # ---- 12 small stories: 4 cols x 3 rows ----
-    scw = (CW - 24) // 4
-    for i, s in enumerate(SMALL):
-        r, c = divmod(i, 4)
-        sx = M + c * (scw + 8)
-        sy = y + r * 54
-        d.text((sx, sy), "%d." % s["n"], font=font(SANS_B, 12), fill=RED)
-        lines = wrap(d, s["headline"], font(SANS_B, 12.5), scw - 20)
+    # ---- 18 featured stories: 6 cols x 3 rows, icon + data point each ----
+    # Data line is coloured by the story's proof chip (green CONFIRMED,
+    # blue REPORTED, gold CLAIM); the footer explains the colours.
+    d.text((M, y), "MORE OF THE DAY \u2014 18 STORIES",
+           font=font(SANS_B, 11), fill=RED)
+    y += 14
+    fcw = (CW - 5 * 8) // 6
+    for i, s in enumerate(FEATURED):
+        r, c = divmod(i, 6)
+        sx = M + c * (fcw + 8)
+        sy = y + r * 64
+        draw_icon(d, sx, sy, 30, 30, s["field"])
+        tx = sx + 36
+        tw = fcw - 36
+        lines = wrap(d, "%d. %s" % (s["n"], s["headline"]),
+                     font(SANS_B, 11.5), tw)
         ly = sy
-        for ln in lines[:2]:
-            d.text((sx + 18, ly), ln, font=font(SANS_B, 12.5), fill=INK)
-            ly += 15
-        cw = chip(d, sx + 18, ly + 1, s["chip"], size=8)
-        d.text((sx + 18 + cw + 5, ly + 2), s["source"], font=font(SANS_R, 8.5),
-               fill=GREY)
-        if c < 3:
-            d.line([(sx + scw + 4, sy), (sx + scw + 4, sy + 48)], fill=LIGHT, width=1)
-    y += 3 * 54 + 8
+        for ln in lines[:3]:
+            d.text((tx, ly), ln, font=font(SANS_B, 11.5), fill=INK)
+            ly += 13
+        d.text((tx, ly), s["data"], font=font(SANS_B, 10),
+               fill=CHIP_COLORS[s["chip"]])
+        ly += 13
+        d.text((tx, ly), trunc(d, s["source"], font(SANS_R, 8.5), tw),
+               font=font(SANS_R, 8.5), fill=GREY)
+        if c < 5:
+            d.line([(sx + fcw + 4, sy), (sx + fcw + 4, sy + 58)],
+                   fill=LIGHT, width=1)
+    y += 3 * 64 + 6
 
     # ---- World map (left) + DATE CHECK (right) ----
     map_w = 620
-    pins = [(s["n"], s["pin"]) for s in LEADS + SMALL]
-    draw_map(d, M, y, map_w, 170, pins)
+    pins = [(s["n"], s["pin"]) for s in LEADS + FEATURED]
+    # region counts over all 33 stories; computed from the data, sums to 33
+    regions = {}
+    for s in LEADS + FEATURED:
+        regions[s["region"]] = regions.get(s["region"], 0) + 1
+    for _n, _h, _c, _s, _f, r in NUMBERED[6:]:
+        regions[r] = regions.get(r, 0) + 1
+    short = {"North America": "N. AMER", "Latin America": "LAT. AMER",
+             "Europe": "EUROPE", "Middle East": "M. EAST",
+             "Africa": "AFRICA", "East Asia": "E. ASIA",
+             "South & Southeast Asia": "S/SE ASIA"}
+    order = sorted(regions.items(), key=lambda kv: (-kv[1], kv[0]))
+    legend = "  \u00b7  ".join("%s %d" % (short[k], v) for k, v in order)
+    legend += "  =  33 STORIES"
+    draw_map(d, M, y, map_w, 160, pins, legend)
     dx = M + map_w + 8
     dw = W - M - dx
-    d.rectangle([dx, y, dx + dw, y + 170], outline=RED, width=2)
+    d.rectangle([dx, y, dx + dw, y + 160], outline=RED, width=2)
     d.rectangle([dx, y, dx + dw, y + 26], fill=RED)
     d.text((dx + 8, y + 5), "DATE CHECK \u2014 LEFT OUT AS OLDER NEWS",
            font=font(SANS_B, 12), fill=(255, 255, 255))
@@ -532,27 +701,38 @@ def main():
                      font(SANS_B, 11), dw - 30),
                font=font(SANS_B, 11), fill=INK)
         dy += 16
-    y += 170 + 8
+    y += 160 + 6
 
-    # ---- Numbered list: 18 more stories, 3 columns x 6 ----
-    d.text((M, y), "THE REST OF THE DAY \u2014 18 MORE STORIES",
+    # ---- Numbered list: 12 more stories, 2 columns x 6, larger type ----
+    d.text((M, y), "THE REST OF THE DAY \u2014 12 MORE STORIES",
            font=font(SANS_B, 14), fill=NAVY)
     d.line([(M, y + 20), (W - M, y + 20)], fill=NAVY, width=1)
     y += 24
-    ncw = (CW - 16) // 3
-    for i, (n, headline, _chip, source, _f, _r) in enumerate(NUMBERED):
+    ncw = (CW - 8) // 2
+    for i, (n, headline, _chip, source, _f, _r) in enumerate(NUMBERED[6:]):
         col, row = divmod(i, 6)
         nx = M + col * (ncw + 8)
-        ny = y + row * 15
-        d.text((nx, ny), "%d." % n, font=font(SANS_B, 10.5), fill=RED)
+        ny = y + row * 16
+        d.text((nx, ny), "%d." % n, font=font(SANS_B, 11.5), fill=RED)
         txt = trunc(d, "%s \u2014 %s" % (headline, source),
-                    font(SANS_R, 10.5), ncw - 26)
-        d.text((nx + 24, ny), txt, font=font(SANS_R, 10.5), fill=INK)
-    y += 6 * 15 + 6
+                    font(SANS_R, 11.5), ncw - 30)
+        d.text((nx + 28, ny), txt, font=font(SANS_R, 11.5), fill=INK)
+    y += 6 * 16 + 6
 
-    # ---- Footer ----
-    fy = H - 20
+    # ---- Footer: verification key (chip colours) + sources ----
+    fy = H - 34
     d.line([(M, fy - 4), (W - M, fy - 4)], fill=GREY, width=1)
+    kx = M
+    for label, expl in (("CONFIRMED", "verified by 2+ outlets or a primary source"),
+                        ("REPORTED", "named outlet, not yet verified"),
+                        ("CLAIM", "one party's claim, unverified")):
+        fnt = font(SANS_B, 9.5)
+        d.text((kx, fy), label, font=fnt, fill=CHIP_COLORS[label])
+        kx += d.textlength(label, font=fnt) + 4
+        fnt2 = font(SANS_R, 9.5)
+        d.text((kx, fy), expl, font=fnt2, fill=GREY)
+        kx += d.textlength(expl, font=fnt2) + 14
+    fy = H - 20
     d.text((M, fy), "Sources: Reuters \u2022 France 24 \u2022 AP \u2022 UN \u2022 Kyiv Independent \u2022 Le Monde \u2022 US Commerce Dept \u2022 Pentagon  \u2014  Built by an AI agent for make.fun's news-image-20261124 bounty.",
            font=font(SANS_R, 9.5), fill=GREY)
 

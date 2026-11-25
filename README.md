@@ -18,10 +18,11 @@ Nvidia up 31% in its best day since 2003.
 - A "THE DAY IN NUMBERS" strip: 700,000 Russian war dead (leaked-data
   estimate), +31% Nvidia, $950bn regained in a day, 24 dead in the
   Cikande factory fire, ~100 missing in the India flood.
-- 12 more stories in a 4-column grid, each with a proof chip and a source.
-- 18 more stories in a numbered list.
+- 18 more stories in a 6-column grid, each with a drawn field icon, a
+  concrete data point, and a source.
+- 12 more stories in a numbered list.
 - A UTC timeline of first-reported times (00:30–04:18 UTC).
-- A world map with 15 numbered pins.
+- A world map with 21 numbered pins and a legend that sums to 33 stories.
 - A DATE CHECK box listing 8 older stories that were deliberately left out
   (COP31, Benghazi warship, Sparta II, "El Chapo Isidro" capture, Nvidia
   SEC inquiry, US Treasury Iran sanctions, EU 22nd sanctions, BepiColombo
